@@ -1,8 +1,9 @@
 {
   "name": "captain-flynn-swift",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
-    "start": "ts-node index.ts"
+    "start": "node --loader ts-node/esm src/index.ts"
   },
   "dependencies": {
     "discord.js": "^14.14.1",
