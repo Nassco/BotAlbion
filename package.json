@@ -1,0 +1,16 @@
+{
+  "name": "captain-flynn-swift",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "ts-node index.ts"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^17.0.1",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
