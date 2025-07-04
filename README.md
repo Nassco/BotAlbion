@@ -1,72 +1,107 @@
-# 🤖 Bot Discord – Captain Flynn Swift
+# 🛡️ Captain Flynn Swift — Bot Discord Albion Online
 
-## 📌 Description générale
-
-Captain Flynn Swift est un bot Discord développé pour l'univers du jeu **Albion Online**. Il permet de récupérer et d'afficher différentes informations liées aux joueurs et aux combats (PvP) du jeu via l’API officielle. Le bot utilise également la bibliothèque `@napi-rs/canvas` pour générer des **images visuelles stylisées** (template d'équipement de kill, etc.).
-
-Ce bot est principalement destiné à un usage personnel ou communautaire autour d’Albion Online, avec un focus sur l’analyse de joueurs, le suivi de statistiques et la visualisation des kills.
+Bot Discord personnel pour explorer les données des joueurs sur **Albion Online** via l'API officielle.
 
 ---
 
-## ⚙️ Commandes disponibles
+## 🎯 Objectif
+
+Ce bot Discord permet de :
+
+- 🔍 Rechercher des informations sur un joueur d'Albion Online (statistiques générales, historiques, etc.).
+- 🧾 Générer une **image personnalisée** représentant un kill (template) avec les équipements du tueur et de la victime.
+- 📊 Afficher les scores de renommée (fame), les ratios K/D, les guildes et alliances, etc.
+
+Il est conçu pour un usage personnel ou entre amis fans du jeu.
+
+---
+
+## 📁 Structure du projet
+
+````
+/src
+  /commands
+    guild.ts            // Affiche les informations d'une guilde
+    ping.ts             // Commande de test
+    playerhistory.ts    // Affiche les derniers kills/décès d'un joueur
+    playerstats.ts      // Montre les stats détaillées d’un joueur
+    template.ts         // Génère une image avec l'équipement d’un kill
+  config.ts             // Lecture du token & config depuis .env
+  index.ts              // Entrée principale, enregistre et démarre le bot
+/assets
+  template.png          // Image de fond du template d’équipement
+  UncialAntiqua.ttf     // (Optionnel) Police médiévale pour le rendu visuel
+````
+
+---
+
+## 🧩 Commandes disponibles
 
 ### `/ping`
-Commande de test simple pour vérifier que le bot est en ligne.  
-**Réponse** : "Pong!"
+
+Commande de test pour vérifier que le bot fonctionne.
 
 ---
 
 ### `/guild`
-Affiche les statistiques principales d’une guilde Albion Online.  
-**Paramètres** :
-- `nom de la guilde` *(string)*
 
-**Données récupérées** :
-- Nombre de membres
-- Fame total
-- Alliances associées
+Affiche des informations sur une guilde : nom, nombre de membres, alliance, etc. (à compléter).
 
 ---
 
 ### `/playerstats`
-Affiche les statistiques détaillées d’un joueur.  
-**Paramètres** :
-- `pseudo` *(string)*
 
-**Données affichées** :
-- PvE Fame, Kill Fame, Death Fame, K/D ratio
-- Gathering Fame par ressource (bois, pierre, minerai, etc.)
-- Activité en Crystal League, Hellgates, Mists, etc.
+Affiche les **statistiques complètes** d’un joueur :
+
+* 🎮 Pseudo
+* 👑 Guilde et alliance (affiché sur une seule ligne)
+* 🏆 Total Fame
+* 📈 Kill Fame
+* 💀 Death Fame
+* 🎯 PvE Fame
+* ⚒️ Crafting Fame
+* 🪓 Gathering Fame
+* 🎯 Ratio K/D
 
 ---
 
 ### `/playerhistory`
-Affiche l'historique des récents combats d’un joueur.  
-**Paramètres** :
-- `pseudo` *(string)*
 
-**Données affichées** :
-- Derniers kills / morts
-- Date, victimes/tueurs, fame, localisation
+Affiche les **derniers combats** (kills ou morts) d’un joueur.
+
+* 🔺 Tueur : pseudo, renommée gagnée, ip
+* 🔻 Victime : pseudo, ip
+* ⏱️ Date du combat
 
 ---
 
 ### `/template`
-Génère une image contenant l’équipement d’un **kill récent**.  
-Actuellement configuré pour récupérer automatiquement les derniers kills d’un joueur spécifique (ex. : Nassco).  
 
-**Image générée** :
-- Affichage visuel des équipements du tueur et de la victime
-- Noms, tags d’alliance et de guilde en haut
-- Design inspiré de l’univers du jeu
+Génère une image dans le style d’Albion Online :
+
+* 📸 Image de fond personnalisée (template.png)
+* 🎽 Affiche les équipements du tueur (gauche) et de la victime (droite)
+* 🧠 Utilise l’API officielle pour récupérer les items avec qualité, enchantement, etc.
+* 🧾 Affiche en haut les pseudos, guildes et alliances
 
 ---
 
-## 🖼️ Particularités
+## ⚙️ Détails techniques
 
-- Génération d’image personnalisée avec `@napi-rs/canvas`
-- Affichage centré des noms + alliances dans le style visuel d'Albion
-- Style typographique ajustable (ex : `Georgia` ou une police custom comme `Uncial Antiqua`)
-- Gestion robuste des erreurs et du chargement des images via l’API de rendu Albion
+* **Langage** : TypeScript
+
+* **Librairies** :
+
+  * `discord.js` pour l’interaction avec l’API Discord
+  * `@napi-rs/canvas` pour le rendu des images (performant)
+  * `dotenv` pour la configuration depuis `.env`
+  * `node-fetch` pour les appels HTTP à l’API Albion
+
+* **Style d’image** :
+
+  * Canvas 1200x610
+  * Les items sont positionnés précisément
+  * Le texte est centré au-dessus des joueurs
+  * La police par défaut est `Georgia`
 
 ---
