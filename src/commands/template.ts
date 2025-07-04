@@ -106,6 +106,20 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       }
     }
 
+    async function drawSilverIcons(ctx: CanvasRenderingContext2D) {
+      const iconPath = path.join(__dirname, "..", "assets", "silver.png");
+      const icon = await loadImage(iconPath);
+
+      const positions = [
+        [579, 237],
+        [619, 277],
+      ];
+
+      for (const [x, y] of positions) {
+        ctx.drawImage(icon as unknown as CanvasImageSource, x, y, 32, 32);
+      }
+    }
+
     // Équipements
     await drawEquip(killerEquip, SLOT_COORDS); // Gauche
     await drawEquip(victimEquip, SLOT_COORDS_RIGHT); // Droite
@@ -113,6 +127,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     // Infos en haut
     drawCenteredPlayerHeader(kill.Killer, 32, 445);
     drawCenteredPlayerHeader(kill.Victim, 752, 1164);
+
+    await drawSilverIcons(ctx);
+
+    // 🔏 Watermark centré
+    ctx.save();
+    ctx.globalAlpha = 0.8; // Opacité légère
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgb(151,121,97)";
+    ctx.font = "bold 28px Impact, Georgia, serif"; // Impact si dispo, sinon Georgia
+    ctx.fillText("Captain Flynn Swift", canvas.width / 2, 50);
+    ctx.restore();
 
     const buffer = canvas.toBuffer("image/png");
     const attachment = new AttachmentBuilder(buffer, {
