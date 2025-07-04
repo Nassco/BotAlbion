@@ -12,29 +12,29 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const SLOT_COORDS = {
-  Head: [185, 138],
-  Armor: [185, 250],
-  Shoes: [185, 365],
-  MainHand: [57, 250],
-  OffHand: [314, 250],
-  Bag: [32, 127],
-  Cape: [340, 127],
-  Mount: [185, 475],
-  Potion: [340, 377],
-  Food: [32, 377],
+  Head: [178, 129],
+  Armor: [178, 241],
+  Shoes: [178, 356],
+  MainHand: [50, 241],
+  OffHand: [307, 241],
+  Bag: [25, 118],
+  Cape: [333, 118],
+  Mount: [178, 466],
+  Potion: [333, 368],
+  Food: [25, 368],
 };
 
 const SLOT_COORDS_RIGHT = {
-  Head: [905, 138],
-  Armor: [905, 250],
-  Shoes: [905, 365],
-  MainHand: [778, 250],
-  OffHand: [1034, 250],
-  Bag: [752, 127],
-  Cape: [1060, 127],
-  Mount: [905, 475],
-  Potion: [1060, 377],
-  Food: [752, 377],
+  Head: [898, 129],
+  Armor: [898, 241],
+  Shoes: [898, 356],
+  MainHand: [771, 241],
+  OffHand: [1027, 241],
+  Bag: [745, 118],
+  Cape: [1053, 118],
+  Mount: [898, 466],
+  Potion: [1053, 368],
+  Food: [745, 368],
 };
 
 export const data = new SlashCommandBuilder()
@@ -72,7 +72,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         try {
           const img = await loadImage(imgUrl);
-          ctx.drawImage(img, x, y, 106, 106);
+          ctx.drawImage(img, x, y, 125, 129);
         } catch (err) {
           console.warn(`❌ Échec chargement image : ${imgUrl}`);
         }
@@ -106,20 +106,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       }
     }
 
-    async function drawSilverIcons(ctx: CanvasRenderingContext2D) {
-      const iconPath = path.join(__dirname, "..", "assets", "silver.png");
-      const icon = await loadImage(iconPath);
-
-      const positions = [
-        [579, 237],
-        [619, 277],
-      ];
-
-      for (const [x, y] of positions) {
-        ctx.drawImage(icon as unknown as CanvasImageSource, x, y, 32, 32);
-      }
-    }
-
     // Équipements
     await drawEquip(killerEquip, SLOT_COORDS); // Gauche
     await drawEquip(victimEquip, SLOT_COORDS_RIGHT); // Droite
@@ -127,8 +113,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     // Infos en haut
     drawCenteredPlayerHeader(kill.Killer, 32, 445);
     drawCenteredPlayerHeader(kill.Victim, 752, 1164);
-
-    await drawSilverIcons(ctx);
 
     // 🔏 Watermark centré
     ctx.save();
