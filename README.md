@@ -1,61 +1,72 @@
-# BotAlbion
+# 🤖 Bot Discord – Captain Flynn Swift
 
-Capitaine Flynn Swift, éclaireur de Lymhurst, vous apporte toutes les infos d'Albion Online : statistiques de joueurs et guildes, top kills, suivi du killboard, alertes et événements. Un compagnon complet pour tout aventurier d'Albion.
+## 📌 Description générale
 
-## Fonctionnalités
+Captain Flynn Swift est un bot Discord développé pour l'univers du jeu **Albion Online**. Il permet de récupérer et d'afficher différentes informations liées aux joueurs et aux combats (PvP) du jeu via l’API officielle. Le bot utilise également la bibliothèque `@napi-rs/canvas` pour générer des **images visuelles stylisées** (template d'équipement de kill, etc.).
 
-- Statistiques de joueurs et guildes
-- Top kills et suivi du killboard
-- Alertes et événements
-- Et plus encore...
+Ce bot est principalement destiné à un usage personnel ou communautaire autour d’Albion Online, avec un focus sur l’analyse de joueurs, le suivi de statistiques et la visualisation des kills.
 
-## Prérequis
+---
 
-- [Node.js](https://nodejs.org/) (v16.9.0 ou plus récent)
-- Un [compte développeur Discord](https://discord.com/developers/applications) pour créer un bot
+## ⚙️ Commandes disponibles
 
-## Installation
+### `/ping`
+Commande de test simple pour vérifier que le bot est en ligne.  
+**Réponse** : "Pong!"
 
-1. Clonez ce dépôt
-   ```
-   git clone https://github.com/votre-username/BotAlbion.git
-   cd BotAlbion
-   ```
+---
 
-2. Installez les dépendances
-   ```
-   npm install
-   ```
+### `/guild`
+Affiche les statistiques principales d’une guilde Albion Online.  
+**Paramètres** :
+- `nom de la guilde` *(string)*
 
-3. Configurez le bot
-   - Renommez `config.json` et ajoutez votre token Discord et autres informations
-   - Vous pouvez obtenir un token en créant une application sur le [portail développeur Discord](https://discord.com/developers/applications)
+**Données récupérées** :
+- Nombre de membres
+- Fame total
+- Alliances associées
 
-4. Démarrez le bot
-   ```
-   npm start
-   ```
+---
 
-## Commandes
+### `/playerstats`
+Affiche les statistiques détaillées d’un joueur.  
+**Paramètres** :
+- `pseudo` *(string)*
 
-Le préfixe par défaut est `!`. Voici quelques exemples de commandes:
+**Données affichées** :
+- PvE Fame, Kill Fame, Death Fame, K/D ratio
+- Gathering Fame par ressource (bois, pierre, minerai, etc.)
+- Activité en Crystal League, Hellgates, Mists, etc.
 
-- `!player [nom]` - Affiche les statistiques d'un joueur
-- `!guild [nom]` - Affiche les informations d'une guilde
-- `!kills [nom]` - Affiche les derniers kills d'un joueur
+---
 
-## Développement
+### `/playerhistory`
+Affiche l'historique des récents combats d’un joueur.  
+**Paramètres** :
+- `pseudo` *(string)*
 
-Pour lancer le bot en mode développement avec redémarrage automatique:
+**Données affichées** :
+- Derniers kills / morts
+- Date, victimes/tueurs, fame, localisation
 
-```
-npm run dev
-```
+---
 
-## Contribuer
+### `/template`
+Génère une image contenant l’équipement d’un **kill récent**.  
+Actuellement configuré pour récupérer automatiquement les derniers kills d’un joueur spécifique (ex. : Nassco).  
 
-Les contributions sont les bienvenues! N'hésitez pas à ouvrir une issue ou une pull request.
+**Image générée** :
+- Affichage visuel des équipements du tueur et de la victime
+- Noms, tags d’alliance et de guilde en haut
+- Design inspiré de l’univers du jeu
 
-## Licence
+---
 
-Ce projet est sous licence MIT.
+## 🖼️ Particularités
+
+- Génération d’image personnalisée avec `@napi-rs/canvas`
+- Affichage centré des noms + alliances dans le style visuel d'Albion
+- Style typographique ajustable (ex : `Georgia` ou une police custom comme `Uncial Antiqua`)
+- Gestion robuste des erreurs et du chargement des images via l’API de rendu Albion
+
+---
