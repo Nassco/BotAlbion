@@ -7,11 +7,14 @@
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.73",
+    "canvas": "^3.1.2",
     "discord.js": "^14.14.1",
     "dotenv": "^17.0.1",
+    "fontkit": "^2.0.4",
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {
+    "@types/fontkit": "^2.0.8",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
   }

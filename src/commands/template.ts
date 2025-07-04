@@ -3,7 +3,7 @@ import {
   ChatInputCommandInteraction,
   AttachmentBuilder,
 } from "discord.js";
-import { createCanvas, loadImage } from "@napi-rs/canvas";
+import { createCanvas, loadImage, registerFont } from "canvas";
 import path from "path";
 import { fileURLToPath } from "url";
 import fetch from "node-fetch";
@@ -36,6 +36,12 @@ const SLOT_COORDS_RIGHT = {
   Potion: [1053, 368],
   Food: [745, 368],
 };
+
+// Enregistrement de la police avec le nom exact du TTF
+registerFont(
+  path.join(__dirname, "../assets/fonts/IMFellEnglishSC-Regular.ttf"),
+  { family: "IM FELL English SC" },
+);
 
 export const data = new SlashCommandBuilder()
   .setName("template")
@@ -91,7 +97,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       let y = 50;
 
       // Pseudo
-      ctx.font = "bold 26px Georgia";
+      ctx.font = "bold 26px IM FELL English SC";
       ctx.fillText(player.Name, centerX, y);
 
       // Alliance + Guilde (sur la même ligne)
@@ -101,7 +107,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
       if (fullLine) {
         y += 30;
-        ctx.font = "20px Georgia";
+        ctx.font = "20px IM FELL English SC";
         ctx.fillText(fullLine, centerX, y);
       }
     }
@@ -113,15 +119,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     // Infos en haut
     drawCenteredPlayerHeader(kill.Killer, 32, 445);
     drawCenteredPlayerHeader(kill.Victim, 752, 1164);
-
-    // 🔏 Watermark centré
-    ctx.save();
-    ctx.globalAlpha = 0.8; // Opacité légère
-    ctx.textAlign = "center";
-    ctx.fillStyle = "rgb(151,121,97)";
-    ctx.font = "bold 28px Impact, Georgia, serif"; // Impact si dispo, sinon Georgia
-    ctx.fillText("Captain Flynn Swift", canvas.width / 2, 50);
-    ctx.restore();
 
     const buffer = canvas.toBuffer("image/png");
     const attachment = new AttachmentBuilder(buffer, {
