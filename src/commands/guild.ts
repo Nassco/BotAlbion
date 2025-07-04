@@ -2,21 +2,22 @@ import {
     SlashCommandBuilder,
     ChatInputCommandInteraction,
     EmbedBuilder,
-} from 'discord.js';
+} from "discord.js";
 
-const baseUrl = 'https://gameinfo-ams.albiononline.com/api/gameinfo';
+const baseUrl = "https://gameinfo-ams.albiononline.com/api/gameinfo";
 
 export const data = new SlashCommandBuilder()
-    .setName('guild')
+    .setName("guild")
     .setDescription("Affiche les informations d'une guilde Albion Online")
-    .addStringOption(option =>
-        option.setName('nom')
-            .setDescription('Nom de la guilde')
-            .setRequired(true)
+    .addStringOption((option) =>
+        option
+            .setName("nom")
+            .setDescription("Nom de la guilde")
+            .setRequired(true),
     );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const nomGuilde = interaction.options.getString('nom', true);
+    const nomGuilde = interaction.options.getString("nom", true);
 
     try {
         console.log(`🔍 Recherche de la guilde "${nomGuilde}"...`);
@@ -28,7 +29,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         if (!searchJson.guilds?.length) {
             console.warn(`⚠️ Aucune guilde trouvée pour "${nomGuilde}".`);
-            return interaction.reply({ content: `🚫 Aucune guilde trouvée pour « ${nomGuilde} »`, ephemeral: true });
+            return interaction.reply({
+                content: `🚫 Aucune guilde trouvée pour « ${nomGuilde} »`,
+                ephemeral: true,
+            });
         }
 
         const guilde = searchJson.guilds[0];
@@ -45,23 +49,42 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         const embed = new EmbedBuilder()
             .setTitle(infos.Name)
-            .setDescription(`🛡️ Alliance : ${infos.AllianceTag || 'Aucune'}`)
+            .setDescription(`🛡️ Alliance : ${infos.AllianceTag || "Aucune"}`)
             .addFields(
-                { name: '📅 Créée le', value: new Date(infos.Founded).toLocaleDateString(), inline: true },
-                { name: '👑 Fondateur', value: infos.FounderName || 'Inconnu', inline: true },
-                { name: '👥 Membres', value: infos.MemberCount?.toString() ?? '0', inline: true },
-                { name: '🏆 Kill Fame', value: infos.killFame?.toLocaleString() ?? '0', inline: true },
-                { name: '💀 Death Fame', value: infos.DeathFame?.toLocaleString() ?? '0', inline: true }
+                {
+                    name: "📅 Créée le",
+                    value: new Date(infos.Founded).toLocaleDateString(),
+                    inline: true,
+                },
+                {
+                    name: "👑 Fondateur",
+                    value: infos.FounderName || "Inconnu",
+                    inline: true,
+                },
+                {
+                    name: "👥 Membres",
+                    value: infos.MemberCount?.toString() ?? "0",
+                    inline: true,
+                },
+                {
+                    name: "🏆 Kill Fame",
+                    value: infos.killFame?.toLocaleString() ?? "0",
+                    inline: true,
+                },
+                {
+                    name: "💀 Death Fame",
+                    value: infos.DeathFame?.toLocaleString() ?? "0",
+                    inline: true,
+                },
             )
             .setFooter({ text: `ID : ${infos.Id}` })
             .setTimestamp();
 
         await interaction.reply({ embeds: [embed] });
-
     } catch (err) {
-        console.error('❌ Erreur dans /guild :', err);
+        console.error("❌ Erreur dans /guild :", err);
         await interaction.reply({
-            content: '❌ Impossible de récupérer les infos de la guilde.',
+            content: "❌ Impossible de récupérer les infos de la guilde.",
             ephemeral: true,
         });
     }
