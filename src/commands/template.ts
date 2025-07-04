@@ -39,8 +39,8 @@ const SLOT_COORDS_RIGHT = {
 
 // Enregistrement de la police avec le nom exact du TTF
 registerFont(
-  path.join(__dirname, "../assets/fonts/IMFellEnglishSC-Regular.ttf"),
-  { family: "IM FELL English SC" },
+  path.join(__dirname, "../assets/fonts/UncialAntiqua-Regular.ttf"),
+  { family: "Uncial Antiqua" },
 );
 
 export const data = new SlashCommandBuilder()
@@ -97,7 +97,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       let y = 50;
 
       // Pseudo
-      ctx.font = "bold 26px IM FELL English SC";
+      ctx.font = "bold 26px Uncial Antiqua";
       ctx.fillText(player.Name, centerX, y);
 
       // Alliance + Guilde (sur la même ligne)
@@ -107,7 +107,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
       if (fullLine) {
         y += 30;
-        ctx.font = "20px IM FELL English SC";
+        ctx.font = "20px Uncial Antiqua";
         ctx.fillText(fullLine, centerX, y);
       }
     }
