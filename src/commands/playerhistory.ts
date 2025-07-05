@@ -13,24 +13,16 @@ const emojiNumbers = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"];
 
 export const data = new SlashCommandBuilder()
     .setName("playerhistory")
-    .setDescription(
-        "Affiche les kills ou morts récents d'un joueur Albion Online",
-    )
+    .setDescription("Affiche les kills ou morts récents d'un joueur Albion Online")
     .addStringOption((option) =>
-        option
-            .setName("pseudo")
-            .setDescription("Nom du joueur")
-            .setRequired(true),
+        option.setName("pseudo").setDescription("Nom du joueur").setRequired(true)
     )
     .addStringOption((option) =>
         option
             .setName("type")
             .setDescription("Type d'historique")
-            .addChoices(
-                { name: "Kills", value: "kills" },
-                { name: "Morts", value: "deaths" },
-            )
-            .setRequired(true),
+            .addChoices({ name: "Kills", value: "kills" }, { name: "Morts", value: "deaths" })
+            .setRequired(true)
     );
 
 function formatDateFR(dateStr: string): string {
@@ -41,6 +33,39 @@ function formatDateFR(dateStr: string): string {
     const hours = String(date.getHours()).padStart(2, "0");
     const minutes = String(date.getMinutes()).padStart(2, "0");
     return `${day}/${month}/${year} ${hours}:${minutes}`;
+}
+
+type EquipmentItem = {
+    Type: string;
+    Quality: number;
+};
+
+async function estimateEquipmentValue(
+    equipment: Record<string, EquipmentItem | null | undefined>
+): Promise<number> {
+    let total = 0;
+    const slots = Object.values(equipment || {}).filter(Boolean) as EquipmentItem[];
+
+    for (const item of slots) {
+        const itemId = item.Type;
+        const quality = item.Quality;
+
+        if (!itemId) continue;
+
+        try {
+            const priceUrl = `https://west.albion-online-data.com/api/v2/stats/prices/${itemId}.json?locations=Caerleon&qualities=${quality}`;
+            const res = await fetch(priceUrl);
+            const data = await res.json();
+
+            if (Array.isArray(data) && data[0]?.sell_price_min > 0) {
+                total += data[0].sell_price_min;
+            }
+        } catch (err) {
+            console.warn(`⚠️ Erreur récupération prix pour ${itemId}:`, err);
+        }
+    }
+
+    return total;
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -83,10 +108,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 : `💀 Dernières morts de ${pseudo}`;
         const color = type === "kills" ? 0x00cc99 : 0xff0000;
 
-        const embed = new EmbedBuilder()
-            .setTitle(title)
-            .setColor(color)
-            .setTimestamp();
+        const embed = new EmbedBuilder().setTitle(title).setColor(color).setTimestamp();
 
         const rows: ActionRowBuilder<ButtonBuilder>[] = [];
 
@@ -103,7 +125,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             return new ButtonBuilder()
                 .setCustomId(`history_${index}`)
                 .setStyle(ButtonStyle.Secondary)
-                .setEmoji(emojiNumbers[index]); // ← ici on met l'emoji
+                .setEmoji(emojiNumbers[index]);
         });
 
         rows.push(new ActionRowBuilder<ButtonBuilder>().addComponents(buttons));
@@ -131,11 +153,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             const killer = selected.Killer || {};
             const victim = selected.Victim || {};
 
+            const [killerValue, victimValue] = await Promise.all([
+                estimateEquipmentValue(killer.Equipment || {}),
+                estimateEquipmentValue(victim.Equipment || {}),
+            ]);
+
             const detailEmbed = new EmbedBuilder()
                 .setTitle(
-                    type === "kills"
-                        ? "🗡️ Détails du kill"
-                        : "☠️ Détails de la mort",
+                    type === "kills" ? "🗡️ Détails du kill" : "☠️ Détails de la mort"
                 )
                 .setColor(color)
                 .addFields(
@@ -159,6 +184,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                         value: `${(selected.TotalVictimKillFame ?? 0).toLocaleString()}`,
                         inline: false,
                     },
+                    {
+                        name: "💸 Estimation équipement",
+                        value: `Tueur : ${killerValue.toLocaleString()} 🪙\nVictime : ${victimValue.toLocaleString()} 🪙`,
+                        inline: false,
+                    }
                 )
                 .setFooter({ text: `Combat #${index + 1}` })
                 .setTimestamp();
