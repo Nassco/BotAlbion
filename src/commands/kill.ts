@@ -38,28 +38,47 @@ const SLOT_COORDS_RIGHT = {
 };
 
 export const data = new SlashCommandBuilder()
-  .setName("template")
-  .setDescription("Génère une image avec les équipements du dernier kill");
+  .setName("kill")
+  .setDescription("Affiche le dernier kill d’un joueur Albion Online")
+  .addStringOption((option) =>
+    option.setName("pseudo").setDescription("Nom du joueur").setRequired(true),
+  );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   try {
     await interaction.deferReply();
+
+    const pseudo = interaction.options.getString("pseudo", true);
+    console.log(`🔍 Requête : recherche du joueur "${pseudo}"`);
+
+    const playerId = await getPlayerId(pseudo);
+
+    if (!playerId) {
+      console.warn(`❌ Aucun ID trouvé pour "${pseudo}"`);
+      await interaction.editReply(`❌ Joueur **${pseudo}** introuvable.`);
+      return;
+    }
+
+    const killsUrl = `https://gameinfo-ams.albiononline.com/api/gameinfo/players/${playerId}/kills`;
+    console.log(`📥 Requête : récupération des kills -> ${killsUrl}`);
+
+    const kills = await fetch(killsUrl).then((res) => res.json());
+
+    if (!Array.isArray(kills) || kills.length === 0) {
+      console.warn(`❌ Aucun kill trouvé pour "${pseudo}"`);
+      await interaction.editReply(`❌ Aucun kill trouvé pour **${pseudo}**.`);
+      return;
+    }
+
+    const kill = kills[0];
+    const killerEquip = kill.Killer.Equipment;
+    const victimEquip = kill.Victim.Equipment;
 
     const bgPath = path.join(__dirname, "..", "assets", "template.png");
     const bg = await loadImage(bgPath);
     const canvas = createCanvas(1200, 610);
     const ctx = canvas.getContext("2d");
     ctx.drawImage(bg, 0, 0, 1200, 610);
-
-    const killData = (await (
-      await fetch(
-        "https://gameinfo-ams.albiononline.com/api/gameinfo/players/tO9kB-LWRpmdszaTISBaVw/kills",
-      )
-    ).json()) as any[];
-
-    const kill = killData[0];
-    const killerEquip = kill.Killer.Equipment;
-    const victimEquip = kill.Victim.Equipment;
 
     async function drawEquip(equipment: any, coords: Record<string, number[]>) {
       for (const [slot, [x, y]] of Object.entries(coords)) {
@@ -74,7 +93,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
           const img = await loadImage(imgUrl);
           ctx.drawImage(img, x, y, 125, 129);
         } catch (err) {
-          console.warn(`❌ Échec chargement image : ${imgUrl}`);
+          console.warn(`❌ Erreur chargement image : ${imgUrl}`);
         }
       }
     }
@@ -90,11 +109,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       const centerX = xStart + (xEnd - xStart) / 2;
       let y = 50;
 
-      // Pseudo
       ctx.font = "bold 26px Uncial Antiqua";
       ctx.fillText(player.Name, centerX, y);
 
-      // Alliance + Guilde (sur la même ligne)
       const allianceTag = player.AllianceName ? `[${player.AllianceName}]` : "";
       const guildName = player.GuildName ?? "";
       const fullLine = `${allianceTag} ${guildName}`.trim();
@@ -116,9 +133,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       ctx.textAlign = "center";
       ctx.fillStyle = "black";
       ctx.font = font;
-
-      const centerX = x + width / 2;
-      ctx.fillText(text, centerX, y);
+      ctx.fillText(text, x + width / 2, y);
     }
 
     async function estimateEquipmentValue(
@@ -126,8 +141,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     ): Promise<number> {
       let total = 0;
       const excludedLocation = "Black Market";
-
       const items = Object.values(equipment || {}).filter(Boolean);
+
       for (const item of items) {
         const itemId = item.Type;
         const quality = item.Quality;
@@ -136,6 +151,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         try {
           const url = `https://west.albion-online-data.com/api/v2/stats/prices/${itemId}.json?qualities=${quality}`;
+          console.log(`📦 Requête prix : ${url}`);
           const res = await fetch(url);
           const data = await res.json();
 
@@ -158,7 +174,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       return total;
     }
 
-    // Équipements
+    // Dessin des équipements
     await drawEquip(killerEquip, SLOT_COORDS);
     await drawEquip(victimEquip, SLOT_COORDS_RIGHT);
 
@@ -170,7 +186,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const killFame = kill.TotalVictimKillFame.toLocaleString("en-US");
     drawCenteredText(`${killFame}`, 480, 180, 240, "bold 26px Arial");
 
-    // Estimation équipement
+    // Estimation valeur équipement + inventaire victime
     const combinedItems = {
       ...victimEquip,
       ...kill.Victim.Inventory?.reduce((acc: any, item: any, index: number) => {
@@ -186,7 +202,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     drawCenteredText(`${formattedValue}`, 480, 310, 240, "bold 26px Arial");
 
     // Date
-    // Date et heure du kill
     const killDate = new Date(kill.TimeStamp);
     const formattedDate = killDate.toLocaleDateString("fr-FR");
     const formattedTime = killDate.toLocaleTimeString("fr-FR", {
@@ -207,13 +222,37 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
 
     await interaction.editReply({
-      content: "Voici l’image générée avec les équipements :",
+      embeds: [
+        {
+          title: `Dernier kill de ${pseudo}`,
+          color: 0x00ff00, // Vert
+          image: {
+            url: "attachment://kill_template.png",
+          },
+        },
+      ],
       files: [attachment],
     });
-  } catch (error) {
-    console.error("Erreur dans /template :", error);
+  } catch (err) {
+    console.error("Erreur dans /kill :", err);
     await interaction.editReply({
-      content: "❌ Une erreur est survenue.",
+      content: "❌ Une erreur est survenue pendant la génération.",
     });
+  }
+}
+
+async function getPlayerId(pseudo: string): Promise<string | null> {
+  try {
+    const url = `https://gameinfo-ams.albiononline.com/api/gameinfo/search?q=${encodeURIComponent(pseudo)}`;
+    console.log(`🔍 Requête API recherche : ${url}`);
+    const res = await fetch(url);
+    const data: any = await res.json();
+    const player = data.players?.find(
+      (p: any) => p.Name.toLowerCase() === pseudo.toLowerCase(),
+    );
+    return player?.Id ?? null;
+  } catch (err) {
+    console.error("❌ Erreur API getPlayerId :", err);
+    return null;
   }
 }
