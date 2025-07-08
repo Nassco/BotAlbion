@@ -6,6 +6,7 @@ import {
     ButtonBuilder,
     ButtonStyle,
     ComponentType,
+
 } from "discord.js";
 
 const baseUrl = "https://gameinfo-ams.albiononline.com/api/gameinfo";
@@ -113,7 +114,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         if (!searchJson.players?.length) {
             return interaction.reply({
                 content: `🚫 Aucun joueur trouvé pour « ${pseudo} »`,
-                ephemeral: true,
+                flags: ['Ephemeral'],
             });
         }
 
@@ -128,7 +129,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         if (!Array.isArray(history) || history.length === 0) {
             return interaction.reply({
                 content: `Aucun ${type === "kills" ? "kill" : "mort"} récent trouvé pour ${pseudo}.`,
-                ephemeral: true,
+                flags: ['Ephemeral'],
             });
         }
 
@@ -176,7 +177,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             if (i.user.id !== interaction.user.id) {
                 return i.reply({
                     content: "❌ Ce bouton ne vous est pas destiné.",
-                    ephemeral: true,
+                    flags: ['Ephemeral'],
                 });
             }
 
@@ -228,7 +229,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 .setFooter({ text: `Combat #${index + 1}` })
                 .setTimestamp();
 
-            await i.reply({ embeds: [detailEmbed], ephemeral: true });
+            await i.reply({ embeds: [detailEmbed], flags: ['Ephemeral'] });
         });
 
         collector.on("end", () => {
@@ -238,7 +239,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         console.error(`❌ Erreur dans /playerhistory :`, err);
         await interaction.reply({
             content: "❌ Impossible de récupérer les données du joueur.",
-            ephemeral: true,
+            flags: ['Ephemeral'],
         });
     }
 }

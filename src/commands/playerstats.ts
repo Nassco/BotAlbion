@@ -31,7 +31,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         if (!searchJson.players?.length) {
             return interaction.reply({
                 content: `🚫 Aucun joueur trouvé pour « ${pseudo} »`,
-                ephemeral: true,
+                flags: ['Ephemeral'],
             });
         }
 
@@ -110,7 +110,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         console.error(`❌ Erreur dans /playerstats :`, err);
         await interaction.reply({
             content: "❌ Impossible de récupérer les infos du joueur.",
-            ephemeral: true,
+            flags: ['Ephemeral'],
         });
     }
 }

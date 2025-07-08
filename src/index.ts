@@ -98,7 +98,7 @@ client.on("interactionCreate", async (interaction: Interaction) => {
             console.error("❌ Erreur dans la commande :", error);
             await interaction.reply({
                 content: "❌ Une erreur est survenue.",
-                ephemeral: true,
+                flags: ['Ephemeral'],
             });
         }
     }

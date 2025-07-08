@@ -31,7 +31,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             console.warn(`⚠️ Aucune guilde trouvée pour "${nomGuilde}".`);
             return interaction.reply({
                 content: `🚫 Aucune guilde trouvée pour « ${nomGuilde} »`,
-                ephemeral: true,
+                flags: ['Ephemeral'],
             });
         }
 
@@ -85,7 +85,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         console.error("❌ Erreur dans /guild :", err);
         await interaction.reply({
             content: "❌ Impossible de récupérer les infos de la guilde.",
-            ephemeral: true,
+            flags: ['Ephemeral'],
         });
     }
 }
