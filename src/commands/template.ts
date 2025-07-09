@@ -3,7 +3,7 @@ import {
   ChatInputCommandInteraction,
   AttachmentBuilder,
 } from "discord.js";
-import { createCanvas, loadImage } from "@napi-rs/canvas";
+import { createCanvas, loadImage, registerFont } from "canvas";
 import path from "path";
 import { fileURLToPath } from "url";
 import fetch from "node-fetch";
@@ -36,6 +36,11 @@ const SLOT_COORDS_RIGHT = {
   Potion: [1053, 368],
   Food: [745, 368],
 };
+
+// Enregistre Orbitron-Medium dans le canvas
+registerFont(path.join(__dirname, "../assets/fonts/Orbitron-Medium.ttf"), {
+  family: "Orbitron",
+});
 
 export const data = new SlashCommandBuilder()
   .setName("template")
@@ -168,7 +173,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     // Kill Fame
     const killFame = kill.TotalVictimKillFame.toLocaleString("en-US");
-    drawCenteredText(`${killFame}`, 480, 180, 240, "bold 26px Arial");
+    drawCenteredText(`${killFame}`, 480, 180, 240, "bold 26px Orbitron");
 
     // Estimation équipement
     const combinedItems = {
@@ -183,7 +188,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const formattedValue = estimatedValue.toLocaleString("en-US", {
       maximumFractionDigits: 0,
     });
-    drawCenteredText(`${formattedValue}`, 480, 310, 240, "bold 26px Arial");
+    drawCenteredText(`${formattedValue}`, 480, 310, 240, "bold 26px Orbitron");
 
     // Date
     // Date et heure du kill
@@ -198,7 +203,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       480,
       480,
       240,
-      "bold 22px Arial",
+      "bold 22px Orbitron",
     );
 
     const buffer = canvas.toBuffer("image/png");
