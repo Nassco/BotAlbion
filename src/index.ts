@@ -54,11 +54,11 @@ try {
 const rest = new REST({ version: "10" }).setToken(config.token);
 
 try {
-    if (!config.guildId) {
-        throw new Error("❌ GUILD_ID manquant dans le fichier .env");
+    if (!config.guildIds || config.guildIds.length === 0) {
+        throw new Error("❌ GUILD_IDS manquant dans .env ou vide.");
     }
 
-    console.log("📡 Enregistrement des commandes auprès de Discord...");
+    console.log("📡 Enregistrement des commandes sur les guildes de dev...");
 
     const controller = new AbortController();
     const timeout = setTimeout(() => {
@@ -66,17 +66,19 @@ try {
         console.error(
             "⏰ Timeout atteint : l'enregistrement des commandes est trop long.",
         );
-    }, 15000); // 15 secondes
+    }, 15000);
 
-    await rest.put(
-        Routes.applicationGuildCommands(config.clientId!, config.guildId),
-        { body: commandsData, signal: controller.signal },
-    );
+    for (const guildId of config.guildIds) {
+        console.log(`🔧 Enregistrement dans la guilde ${guildId}...`);
+        await rest.put(
+            Routes.applicationGuildCommands(config.clientId!, guildId),
+            { body: commandsData, signal: controller.signal },
+        );
+    }
 
     clearTimeout(timeout);
-
     console.log(
-        `✅ ${commands.size} commande(s) enregistrée(s) dans la guilde de test.`,
+        `✅ ${commands.size} commande(s) enregistrée(s) dans ${config.guildIds.length} guilde(s).`,
     );
 } catch (err) {
     console.error("❌ Erreur lors de l'enregistrement des commandes :", err);
@@ -98,7 +100,7 @@ client.on("interactionCreate", async (interaction: Interaction) => {
             console.error("❌ Erreur dans la commande :", error);
             await interaction.reply({
                 content: "❌ Une erreur est survenue.",
-                flags: ['Ephemeral'],
+                flags: ["Ephemeral"],
             });
         }
     }

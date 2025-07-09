@@ -143,6 +143,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       const excludedLocation = "Black Market";
       const items = Object.values(equipment || {}).filter(Boolean);
 
+      let countedItems = 0;
+
       for (const item of items) {
         const itemId = item.Type;
         const quality = item.Quality;
@@ -163,13 +165,27 @@ export async function execute(interaction: ChatInputCommandInteraction) {
               const avg =
                 valid.reduce((sum, e) => sum + e.sell_price_min, 0) /
                 valid.length;
+              console.log(
+                `📊 ${itemId} (qualité ${quality}): ${valid.length} entrées valides, moyenne = ${Math.round(avg)}`,
+              );
               total += avg;
+              countedItems++;
+            } else {
+              console.log(
+                `⚠️ ${itemId} (qualité ${quality}) : aucun prix valide trouvé`,
+              );
             }
+          } else {
+            console.warn(`❌ Format inattendu pour les prix de ${itemId}`);
           }
         } catch (err) {
           console.warn(`⚠️ Erreur prix pour ${itemId}`, err);
         }
       }
+
+      console.log(
+        `💰 Total estimé pour ${countedItems} items : ${Math.round(total)}`,
+      );
 
       return total;
     }

@@ -3,6 +3,7 @@ import {
     ChatInputCommandInteraction,
     EmbedBuilder,
 } from "discord.js";
+import { PlayerInfo } from "../interfaces/PlayerInfo.js"; // ← Import du type
 
 const baseUrl = "https://gameinfo-ams.albiononline.com/api/gameinfo";
 
@@ -31,7 +32,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         if (!searchJson.players?.length) {
             return interaction.reply({
                 content: `🚫 Aucun joueur trouvé pour « ${pseudo} »`,
-                flags: ['Ephemeral'],
+                flags: ["Ephemeral"],
             });
         }
 
@@ -41,7 +42,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         const statsUrl = `${baseUrl}/players/${id}`;
         console.log(`📡 GET ${statsUrl}`);
         const statsRes = await fetch(statsUrl);
-        const stats = await statsRes.json();
+        const stats = (await statsRes.json()) as PlayerInfo; // ✅ Cast typé
 
         console.log(`✅ Stats trouvées pour ${stats.Name} (${stats.Id})`);
 
@@ -67,38 +68,32 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 },
                 {
                     name: "📈 Kill Fame",
-                    value: (stats.KillFame ?? 0).toLocaleString(),
+                    value: stats.KillFame.toLocaleString(),
                     inline: true,
                 },
                 {
                     name: "💀 Death Fame",
-                    value: (stats.DeathFame ?? 0).toLocaleString(),
+                    value: stats.DeathFame.toLocaleString(),
                     inline: true,
                 },
                 {
                     name: "🎯 PvE Fame",
-                    value:
-                        stats.LifetimeStatistics?.PvE?.Total?.toLocaleString() ??
-                        "0",
+                    value: stats.LifetimeStatistics.PvE.Total.toLocaleString(),
                     inline: true,
                 },
                 {
                     name: "🏹 Gathering Fame",
-                    value:
-                        stats.LifetimeStatistics?.Gathering?.All?.Total?.toLocaleString() ??
-                        "0",
+                    value: stats.LifetimeStatistics.Gathering.All.Total.toLocaleString(),
                     inline: true,
                 },
                 {
                     name: "⚒️ Crafting Fame",
-                    value:
-                        stats.LifetimeStatistics?.Crafting?.Total?.toLocaleString() ??
-                        "0",
+                    value: stats.LifetimeStatistics.Crafting.Total.toLocaleString(),
                     inline: true,
                 },
                 {
                     name: "🎯 K/D Ratio",
-                    value: (stats.FameRatio ?? 0).toFixed(2),
+                    value: stats.FameRatio.toFixed(2),
                     inline: true,
                 },
             )
@@ -110,7 +105,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         console.error(`❌ Erreur dans /playerstats :`, err);
         await interaction.reply({
             content: "❌ Impossible de récupérer les infos du joueur.",
-            flags: ['Ephemeral'],
+            flags: ["Ephemeral"],
         });
     }
 }
