@@ -66,7 +66,7 @@ web_modules/
 .yarn-integrity
 
 # Config files with sensitive data
-src/config.ts
+#src/config.ts
 
 # dotenv environment variable files
 .env
