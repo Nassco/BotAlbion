@@ -1,17 +1,22 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import {
+  SlashCommandBuilder,
+  ChatInputCommandInteraction,
+  EmbedBuilder,
+} from "discord.js";
+import db from "../db.js";
 import fetch from "node-fetch";
 import { PlayerInfo } from "../interfaces/PlayerInfo.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const PLAYERS_FILE = path.join(__dirname, "..", "data", "players.json");
+type RegisteredPlayer = {
+  name: string;
+  idAO: string;
+};
 
 export const data = new SlashCommandBuilder()
   .setName("leaderboard")
-  .setDescription("Classe les joueurs enregistrés selon un type de statistique")
+  .setDescription(
+    "Classe les joueurs de cette guilde selon un type de statistique",
+  )
   .addStringOption((option) =>
     option
       .setName("type")
@@ -24,26 +29,26 @@ export const data = new SlashCommandBuilder()
   );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
+  const guildId = interaction.guildId;
+  if (!guildId) {
+    await interaction.reply({
+      content: "❌ Cette commande doit être utilisée dans une guilde Discord.",
+      ephemeral: true,
+    });
+    return;
+  }
+
   await interaction.deferReply();
 
   const type = interaction.options.getString("type", true);
-  let players: any[] = [];
 
-  try {
-    if (!fs.existsSync(PLAYERS_FILE)) {
-      await interaction.editReply("📭 Aucun joueur enregistré.");
-      return;
-    }
+  const players = db
+    .prepare("SELECT name, idAO FROM players WHERE guildId = ?")
+    .all(guildId) as RegisteredPlayer[];
 
-    players = JSON.parse(fs.readFileSync(PLAYERS_FILE, "utf8"));
-    if (!Array.isArray(players) || players.length === 0) {
-      await interaction.editReply("📭 Aucun joueur enregistré.");
-      return;
-    }
-  } catch (err) {
-    console.error("❌ Erreur lecture players.json :", err);
+  if (players.length === 0) {
     await interaction.editReply(
-      "❌ Impossible de lire les joueurs enregistrés.",
+      "📭 Aucun joueur enregistré pour cette guilde.",
     );
     return;
   }
@@ -52,51 +57,39 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   for (const player of players) {
     try {
-      const url = `https://gameinfo-ams.albiononline.com/api/gameinfo/players/${player.id}`;
-      const res = await fetch(url);
+      const res = await fetch(
+        `https://gameinfo-ams.albiononline.com/api/gameinfo/players/${player.idAO}`,
+      );
       const data = (await res.json()) as PlayerInfo;
 
-      if (type === "pve") {
-        results.push({
-          name: player.name,
-          fame: data.LifetimeStatistics.PvE.Total,
-        });
-      } else if (type === "pvp") {
-        results.push({
-          name: player.name,
-          fame: data.KillFame,
-        });
-      }
+      const fame =
+        type === "pve" ? data.LifetimeStatistics.PvE.Total : data.KillFame;
+
+      results.push({ name: player.name, fame });
     } catch (err) {
-      console.warn(`⚠️ Erreur récupération stats pour ${player.name}`, err);
+      console.warn(`⚠️ Erreur pour ${player.name} :`, err);
     }
   }
 
   if (results.length === 0) {
-    await interaction.editReply("❌ Aucune donnée récupérée pour les joueurs.");
+    await interaction.editReply("❌ Aucune donnée récupérée.");
     return;
   }
 
-  // Tri décroissant
   results.sort((a, b) => b.fame - a.fame);
 
-  const title =
-    type === "pve"
-      ? "🏆 Leaderboard - PvE Fame"
-      : "⚔️ Leaderboard - PvP Kill Fame";
+  const title = type === "pve" ? "🏆 Leaderboard PvE" : "⚔️ Leaderboard PvP";
 
-  const lines = results.map(
-    (r, i) =>
-      `\`${i + 1}.\` **${r.name}** - ${r.fame.toLocaleString("en-US")} fame`,
-  );
-
-  await interaction.editReply({
-    embeds: [
-      {
-        title,
-        description: lines.join("\n"),
-        color: 0xf1c40f,
-      },
-    ],
+  const medals = ["🥇", "🥈", "🥉"];
+  const lines = results.map((r, i) => {
+    const prefix = medals[i] ?? `\`${i + 1}.\``;
+    return `${prefix} **${r.name}** — ${r.fame.toLocaleString("en-US")} fame`;
   });
+
+  const embed = new EmbedBuilder()
+    .setTitle(title + " (guilde actuelle)")
+    .setDescription(lines.join("\n"))
+    .setColor(0xf1c40f);
+
+  await interaction.editReply({ embeds: [embed] });
 }
