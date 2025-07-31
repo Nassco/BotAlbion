@@ -20,7 +20,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (!guildId) {
     await interaction.reply({
       content: "❌ Cette commande doit être utilisée dans une guilde Discord.",
-      ephemeral: true,
+      flags: ['Ephemeral'],
     });
     return;
   }

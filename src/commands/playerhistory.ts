@@ -6,11 +6,11 @@ import {
     ButtonBuilder,
     ButtonStyle,
     ComponentType,
-
 } from "discord.js";
-
-const baseUrl = "https://gameinfo-ams.albiononline.com/api/gameinfo";
-const emojiNumbers = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"];
+import { getPlayerHistory, estimateEquipmentValue } from "../services/albionApi.js";
+import { EMOJI_NUMBERS, BUTTON_COLLECTOR_TIMEOUT } from "../constants.js";
+import { HistoryEntry } from "../interfaces/AlbionApiTypes.js";
+import { findPlayer } from "../utils/playerUtils.js";
 
 export const data = new SlashCommandBuilder()
     .setName("playerhistory")
@@ -49,56 +49,6 @@ type EquipmentItem = {
     Quality: number;
 };
 
-async function estimateEquipmentValue(
-    equipment: Record<string, EquipmentItem | null | undefined>,
-): Promise<number> {
-    const totalItems: number = Object.values(equipment || {}).filter(
-        Boolean,
-    ).length;
-    if (totalItems === 0) return 0;
-
-    let total = 0;
-
-    const excludedLocation = "Black Market";
-
-    for (const item of Object.values(equipment || {}).filter(
-        Boolean,
-    ) as EquipmentItem[]) {
-        const itemId = item.Type;
-        const quality = item.Quality;
-
-        if (!itemId) continue;
-
-        try {
-            const priceUrl = `https://west.albion-online-data.com/api/v2/stats/prices/${itemId}.json?qualities=${quality}`;
-            const res = await fetch(priceUrl);
-            const data = await res.json();
-
-            if (Array.isArray(data)) {
-                const validPrices = data.filter(
-                    (entry: any) =>
-                        entry.sell_price_min > 0 &&
-                        entry.city !== excludedLocation,
-                );
-
-                if (validPrices.length > 0) {
-                    const avgPrice =
-                        validPrices.reduce(
-                            (sum, entry) => sum + entry.sell_price_min,
-                            0,
-                        ) / validPrices.length;
-
-                    total += avgPrice;
-                }
-            }
-        } catch (err) {
-            console.warn(`⚠️ Erreur récupération prix pour ${itemId}:`, err);
-        }
-    }
-
-    return total;
-}
-
 export async function execute(interaction: ChatInputCommandInteraction) {
     const pseudo = interaction.options.getString("pseudo", true);
     const type = interaction.options.getString("type", true);
@@ -106,25 +56,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     console.log(`🔍 /playerhistory ${pseudo} (${type})`);
 
     try {
-        const searchUrl = `${baseUrl}/search?q=${encodeURIComponent(pseudo)}`;
-        console.log(`📡 GET ${searchUrl}`);
-        const searchRes = await fetch(searchUrl);
-        const searchJson = await searchRes.json();
-
-        if (!searchJson.players?.length) {
-            return interaction.reply({
-                content: `🚫 Aucun joueur trouvé pour « ${pseudo} »`,
-                flags: ['Ephemeral'],
-            });
-        }
-
-        const player = searchJson.players[0];
+        const player = await findPlayer(interaction, pseudo);
+        if (!player) return; // findPlayer already replied with an error message
+        
         const playerId = player.Id;
 
-        const historyUrl = `${baseUrl}/players/${playerId}/${type}`;
-        console.log(`📡 GET ${historyUrl}`);
-        const historyRes = await fetch(historyUrl);
-        const history = await historyRes.json();
+        const history = await getPlayerHistory(playerId, type as "kills" | "deaths");
 
         if (!Array.isArray(history) || history.length === 0) {
             return interaction.reply({
@@ -146,7 +83,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         const rows: ActionRowBuilder<ButtonBuilder>[] = [];
 
-        const buttons = history.slice(0, 5).map((entry: any, index: number) => {
+        const buttons = history.slice(0, 5).map((entry: HistoryEntry, index: number) => {
             const timestamp = formatDateFR(entry.TimeStamp);
             embed.addFields({
                 name: `#${index + 1} - ${timestamp}`,
@@ -159,7 +96,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             return new ButtonBuilder()
                 .setCustomId(`history_${index}`)
                 .setStyle(ButtonStyle.Secondary)
-                .setEmoji(emojiNumbers[index]);
+                .setEmoji(EMOJI_NUMBERS[index]);
         });
 
         rows.push(new ActionRowBuilder<ButtonBuilder>().addComponents(buttons));
@@ -170,7 +107,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         const collector = message.createMessageComponentCollector({
             componentType: ComponentType.Button,
-            time: 30_000,
+            time: BUTTON_COLLECTOR_TIMEOUT,
         });
 
         collector.on("collect", async (i) => {

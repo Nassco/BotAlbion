@@ -6,7 +6,10 @@ import {
 import { createCanvas, loadImage, registerFont } from "canvas";
 import path from "path";
 import { fileURLToPath } from "url";
-import fetch from "node-fetch";
+import { getPlayerDeaths, estimateEquipmentValue } from "../services/albionApi.js";
+import { ALBION_AVATAR_URL } from "../constants.js";
+import { findPlayer } from "../utils/playerUtils.js";
+import { HistoryEntry, CombatParticipant } from "../interfaces/AlbionApiTypes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,18 +59,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const pseudo = interaction.options.getString("pseudo", true);
     console.log(`🔍 Requête : recherche du joueur "${pseudo}"`);
 
-    const playerId = await getPlayerId(pseudo);
-
-    if (!playerId) {
-      console.warn(`❌ Aucun ID trouvé pour "${pseudo}"`);
-      await interaction.editReply(`❌ Joueur **${pseudo}** introuvable.`);
+    // Use the shared findPlayer utility
+    const player = await findPlayer(interaction, pseudo);
+    if (!player) {
+      // findPlayer already replied with an error message
       return;
     }
+    
+    const playerId = player.Id;
 
-    const deathsUrl = `https://gameinfo-ams.albiononline.com/api/gameinfo/players/${playerId}/deaths`;
-    console.log(`📥 Requête : récupération des morts -> ${deathsUrl}`);
-
-    const deaths = await fetch(deathsUrl).then((res) => res.json());
+    console.log(`📥 Requête : récupération des morts pour ${playerId}`);
+    const deaths = await getPlayerDeaths(playerId);
 
     if (!Array.isArray(deaths) || deaths.length === 0) {
       console.warn(`❌ Aucune mort trouvée pour "${pseudo}"`);
@@ -76,8 +78,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     }
 
     const death = deaths[0];
-    const victimEquip = death.Victim.Equipment;
-    const killerEquip = death.Killer.Equipment;
+    const victimEquip = death.Victim.Equipment || {};
+    const killerEquip = death.Killer.Equipment || {};
 
     const bgPath = path.join(__dirname, "..", "assets", "template.png");
     const bg = await loadImage(bgPath);
@@ -85,14 +87,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const ctx = canvas.getContext("2d");
     ctx.drawImage(bg, 0, 0, 1200, 610);
 
-    async function drawEquip(equipment: any, coords: Record<string, number[]>) {
+    async function drawEquip(equipment: Record<string, any>, coords: Record<string, number[]>) {
       for (const [slot, [x, y]] of Object.entries(coords)) {
         const item = equipment[slot];
         if (!item?.Type) continue;
 
         const type = item.Type;
         const quality = item.Quality ?? 1;
-        const imgUrl = `https://render.albiononline.com/v1/item/${type}.png?quality=${quality}`;
+        const imgUrl = `${ALBION_AVATAR_URL.replace('/avatar', '/item')}/${type}.png?quality=${quality}`;
 
         try {
           const img = await loadImage(imgUrl);
@@ -104,7 +106,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     }
 
     function drawCenteredPlayerHeader(
-      player: any,
+      player: CombatParticipant,
       xStart: number,
       xEnd: number,
     ) {
@@ -141,43 +143,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       ctx.fillText(text, x + width / 2, y);
     }
 
-    async function estimateEquipmentValue(
-      equipment: Record<string, any>,
-    ): Promise<number> {
-      let total = 0;
-      const excludedLocation = "Black Market";
-      const items = Object.values(equipment || {}).filter(Boolean);
-
-      for (const item of items) {
-        const itemId = item.Type;
-        const quality = item.Quality;
-
-        if (!itemId) continue;
-
-        try {
-          const url = `https://west.albion-online-data.com/api/v2/stats/prices/${itemId}.json?qualities=${quality}`;
-          console.log(`📦 Requête prix : ${url}`);
-          const res = await fetch(url);
-          const data = await res.json();
-
-          if (Array.isArray(data)) {
-            const valid = data.filter(
-              (e: any) => e.sell_price_min > 0 && e.city !== excludedLocation,
-            );
-            if (valid.length > 0) {
-              const avg =
-                valid.reduce((sum, e) => sum + e.sell_price_min, 0) /
-                valid.length;
-              total += avg;
-            }
-          }
-        } catch (err) {
-          console.warn(`⚠️ Erreur prix pour ${itemId}`, err);
-        }
-      }
-
-      return total;
-    }
 
     // Dessin des équipements
     await drawEquip(killerEquip, SLOT_COORDS);
@@ -195,7 +160,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const combinedItems = {
       ...victimEquip,
       ...death.Victim.Inventory?.reduce(
-        (acc: any, item: any, index: number) => {
+        (acc: Record<string, { Type: string; Quality: number }>, item, index: number) => {
           if (item?.Type) acc[`InventorySlot${index}`] = item;
           return acc;
         },
@@ -249,18 +214,3 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 }
 
-async function getPlayerId(pseudo: string): Promise<string | null> {
-  try {
-    const url = `https://gameinfo-ams.albiononline.com/api/gameinfo/search?q=${encodeURIComponent(pseudo)}`;
-    console.log(`🔍 Requête API recherche : ${url}`);
-    const res = await fetch(url);
-    const data: any = await res.json();
-    const player = data.players?.find(
-      (p: any) => p.Name.toLowerCase() === pseudo.toLowerCase(),
-    );
-    return player?.Id ?? null;
-  } catch (err) {
-    console.error("❌ Erreur API getPlayerId :", err);
-    return null;
-  }
-}

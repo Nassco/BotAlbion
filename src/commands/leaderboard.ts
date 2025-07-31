@@ -4,7 +4,7 @@ import {
   EmbedBuilder,
 } from "discord.js";
 import db from "../db.js";
-import fetch from "node-fetch";
+import { getPlayerInfo } from "../services/albionApi.js";
 import { PlayerInfo } from "../interfaces/PlayerInfo.js";
 
 type RegisteredPlayer = {
@@ -33,7 +33,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (!guildId) {
     await interaction.reply({
       content: "❌ Cette commande doit être utilisée dans une guilde Discord.",
-      ephemeral: true,
+      flags: ['Ephemeral'],
     });
     return;
   }
@@ -53,23 +53,21 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  const results: { name: string; fame: number }[] = [];
-
-  for (const player of players) {
+  // Utiliser Promise.all pour exécuter les requêtes en parallèle
+  const fetchPromises = players.map(async (player) => {
     try {
-      const res = await fetch(
-        `https://gameinfo-ams.albiononline.com/api/gameinfo/players/${player.idAO}`,
-      );
-      const data = (await res.json()) as PlayerInfo;
-
-      const fame =
-        type === "pve" ? data.LifetimeStatistics.PvE.Total : data.KillFame;
-
-      results.push({ name: player.name, fame });
+      const data = await getPlayerInfo(player.idAO);
+      const fame = type === "pve" ? data.LifetimeStatistics.PvE.Total : data.KillFame;
+      
+      return { name: player.name, fame };
     } catch (err) {
       console.warn(`⚠️ Erreur pour ${player.name} :`, err);
+      return null;
     }
-  }
+  });
+
+  const fetchResults = await Promise.all(fetchPromises);
+  const results = fetchResults.filter((result): result is { name: string; fame: number } => result !== null);
 
   if (results.length === 0) {
     await interaction.editReply("❌ Aucune donnée récupérée.");

@@ -13,7 +13,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (!guildId) {
     await interaction.reply({
       content: "❌ Commande à utiliser dans une guilde.",
-      ephemeral: true,
+      flags: ['Ephemeral'],
     });
     return;
   }
@@ -21,7 +21,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (!interaction.memberPermissions?.has("Administrator")) {
     await interaction.reply({
       content: "❌ Seuls les administrateurs peuvent utiliser cette commande.",
-      ephemeral: true,
+      flags: ['Ephemeral'],
     });
     return;
   }

@@ -129,15 +129,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     async function estimateEquipmentValue(
       equipment: Record<string, any>,
     ): Promise<number> {
-      let total = 0;
       const excludedLocation = "Black Market";
-
       const items = Object.values(equipment || {}).filter(Boolean);
-      for (const item of items) {
+      
+      if (items.length === 0) return 0;
+      
+      // Créer un tableau de promesses pour chaque item
+      const pricePromises = items.map(async (item) => {
         const itemId = item.Type;
         const quality = item.Quality;
 
-        if (!itemId) continue;
+        if (!itemId) return 0;
 
         try {
           const url = `https://west.albion-online-data.com/api/v2/stats/prices/${itemId}.json?qualities=${quality}`;
@@ -149,18 +151,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
               (e: any) => e.sell_price_min > 0 && e.city !== excludedLocation,
             );
             if (valid.length > 0) {
-              const avg =
-                valid.reduce((sum, e) => sum + e.sell_price_min, 0) /
-                valid.length;
-              total += avg;
+              return valid.reduce((sum, e) => sum + e.sell_price_min, 0) / valid.length;
             }
           }
+          return 0;
         } catch (err) {
           console.warn(`⚠️ Erreur prix pour ${itemId}`, err);
+          return 0;
         }
-      }
+      });
 
-      return total;
+      // Exécuter toutes les promesses en parallèle et additionner les résultats
+      const prices = await Promise.all(pricePromises);
+      return prices.reduce((total, price) => total + price, 0);
     }
 
     // Équipements

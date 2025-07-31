@@ -4,8 +4,8 @@ import {
     EmbedBuilder,
 } from "discord.js";
 import { PlayerInfo } from "../interfaces/PlayerInfo.js"; // ← Import du type
-
-const baseUrl = "https://gameinfo-ams.albiononline.com/api/gameinfo";
+import { getPlayerInfo } from "../services/albionApi.js";
+import { findPlayer } from "../utils/playerUtils.js";
 
 export const data = new SlashCommandBuilder()
     .setName("playerstats")
@@ -24,25 +24,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     console.log(`🔍 /playerstats ${pseudo}`);
 
     try {
-        const searchUrl = `${baseUrl}/search?q=${encodeURIComponent(pseudo)}`;
-        console.log(`📡 GET ${searchUrl}`);
-        const searchRes = await fetch(searchUrl);
-        const searchJson = await searchRes.json();
-
-        if (!searchJson.players?.length) {
-            return interaction.reply({
-                content: `🚫 Aucun joueur trouvé pour « ${pseudo} »`,
-                flags: ["Ephemeral"],
-            });
-        }
-
-        const player = searchJson.players[0];
+        const player = await findPlayer(interaction, pseudo);
+        if (!player) return; // findPlayer already replied with an error message
+        
         const id = player.Id;
 
-        const statsUrl = `${baseUrl}/players/${id}`;
-        console.log(`📡 GET ${statsUrl}`);
-        const statsRes = await fetch(statsUrl);
-        const stats = (await statsRes.json()) as PlayerInfo; // ✅ Cast typé
+        const stats = await getPlayerInfo(id);
 
         console.log(`✅ Stats trouvées pour ${stats.Name} (${stats.Id})`);
 
