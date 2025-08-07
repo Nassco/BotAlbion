@@ -1,7 +1,12 @@
 import winston from 'winston';
 import path from 'path';
 
-// Create a custom format that includes timestamp, log level, and message
+/**
+ * Crée un format personnalisé pour les logs qui inclut l'horodatage, le niveau et le message
+ * 
+ * @param options - Options du format (level, message, timestamp, metadata)
+ * @returns Message formaté pour l'affichage
+ */
 const customFormat = winston.format.printf(({ level, message, timestamp, ...metadata }) => {
   // Format the timestamp to be more readable
   // @ts-ignore
@@ -29,7 +34,10 @@ const customFormat = winston.format.printf(({ level, message, timestamp, ...meta
   return logMessage;
 });
 
-// Create the logger instance
+/**
+ * Crée l'instance du logger avec les transports et formats configurés
+ * Enregistre les logs dans la console et dans des fichiers
+ */
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info', // Default to 'info' if not specified
   format: winston.format.combine(
@@ -78,7 +86,12 @@ if (process.env.NODE_ENV !== 'production') {
   );
 }
 
-// Helper function to get the calling file name
+/**
+ * Fonction utilitaire pour obtenir le nom du fichier appelant
+ * Utilise la stack trace pour déterminer quel fichier a appelé le logger
+ * 
+ * @returns Nom du fichier appelant ou 'unknown' si non déterminé
+ */
 function getCallerFile() {
   const err = new Error();
   const stack = err.stack?.split('\n')[3];
@@ -90,26 +103,71 @@ function getCallerFile() {
   return 'unknown';
 }
 
-// Export a wrapper that adds the source file to the log
+/**
+ * Exporte un wrapper qui ajoute automatiquement le fichier source au log
+ * Fournit des méthodes pour chaque niveau de log
+ */
 export default {
+  /**
+   * Enregistre un message de niveau error
+   * 
+   * @param message - Message à enregistrer
+   * @param meta - Métadonnées additionnelles (optionnel)
+   */
   error: (message: string, meta?: any) => {
     logger.error(message, { ...meta, source: getCallerFile() });
   },
+  /**
+   * Enregistre un message de niveau warn
+   * 
+   * @param message - Message à enregistrer
+   * @param meta - Métadonnées additionnelles (optionnel)
+   */
   warn: (message: string, meta?: any) => {
     logger.warn(message, { ...meta, source: getCallerFile() });
   },
+  /**
+   * Enregistre un message de niveau info
+   * 
+   * @param message - Message à enregistrer
+   * @param meta - Métadonnées additionnelles (optionnel)
+   */
   info: (message: string, meta?: any) => {
     logger.info(message, { ...meta, source: getCallerFile() });
   },
+  /**
+   * Enregistre un message de niveau http
+   * 
+   * @param message - Message à enregistrer
+   * @param meta - Métadonnées additionnelles (optionnel)
+   */
   http: (message: string, meta?: any) => {
     logger.http(message, { ...meta, source: getCallerFile() });
   },
+  /**
+   * Enregistre un message de niveau verbose
+   * 
+   * @param message - Message à enregistrer
+   * @param meta - Métadonnées additionnelles (optionnel)
+   */
   verbose: (message: string, meta?: any) => {
     logger.verbose(message, { ...meta, source: getCallerFile() });
   },
+  /**
+   * Enregistre un message de niveau debug
+   * 
+   * @param message - Message à enregistrer
+   * @param meta - Métadonnées additionnelles (optionnel)
+   */
   debug: (message: string, meta?: any) => {
     logger.debug(message, { ...meta, source: getCallerFile() });
   },
+  /**
+   * Enregistre un message de niveau silly
+   * 
+   * @param message - Message à enregistrer
+   * @param meta - Métadonnées additionnelles (optionnel)
+   */
   silly: (message: string, meta?: any) => {
     logger.silly(message, { ...meta, source: getCallerFile() });
   }

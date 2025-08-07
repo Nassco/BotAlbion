@@ -14,17 +14,32 @@ import { findPlayer } from "../utils/playerUtils.js";
 import logger from "../utils/logger.js";
 import { withErrorHandling, createError, ErrorType } from "../utils/errorHandler.js";
 
+/**
+ * Configuration de la commande slash Discord pour l'historique des joueurs
+ */
 export const data = new SlashCommandBuilder()
     .setName("playerhistory")
     .setDescription(
         "Affiche les kills ou morts récents d'un joueur Albion Online",
     )
+    /**
+     * Option pour spécifier le pseudo du joueur
+     * 
+     * @param option - Constructeur d'option de commande
+     * @returns Option configurée
+     */
     .addStringOption((option) =>
         option
             .setName("pseudo")
             .setDescription("Nom du joueur")
             .setRequired(true),
     )
+    /**
+     * Option pour spécifier le type d'historique (kills ou morts)
+     * 
+     * @param option - Constructeur d'option de commande
+     * @returns Option configurée
+     */
     .addStringOption((option) =>
         option
             .setName("type")
@@ -36,6 +51,12 @@ export const data = new SlashCommandBuilder()
             .setRequired(true),
     );
 
+/**
+ * Formate une date au format français (DD/MM/YYYY HH:MM)
+ * 
+ * @param dateStr - Chaîne de caractères représentant une date
+ * @returns Date formatée au format français
+ */
 function formatDateFR(dateStr: string): string {
     const date = new Date(dateStr);
     const day = String(date.getDate()).padStart(2, "0");
@@ -46,11 +67,26 @@ function formatDateFR(dateStr: string): string {
     return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
+/**
+ * Représente un élément d'équipement d'un joueur
+ */
 type EquipmentItem = {
+    /**
+     * Type d'équipement
+     */
     Type: string;
+    /**
+     * Qualité de l'équipement
+     */
     Quality: number;
 };
 
+/**
+ * Exécute la commande d'historique du joueur
+ * 
+ * @param interaction - L'interaction Discord qui a déclenché la commande
+ * @throws Erreur si le joueur n'est pas trouvé ou si l'historique est vide
+ */
 async function executeCommand(interaction: ChatInputCommandInteraction) {
     const pseudo = interaction.options.getString("pseudo", true);
     const type = interaction.options.getString("type", true);
@@ -201,5 +237,8 @@ async function executeCommand(interaction: ChatInputCommandInteraction) {
     });
 }
 
-// Wrap the command execution with error handling
+/**
+ * Exporte la fonction d'exécution de la commande avec gestion des erreurs
+ * Cette fonction est appelée par le gestionnaire de commandes Discord
+ */
 export const execute = withErrorHandling(executeCommand, "playerhistory");

@@ -2,7 +2,7 @@ import { ChatInputCommandInteraction } from "discord.js";
 import logger from "./logger.js";
 
 /**
- * Error types for consistent error handling
+ * Types d'erreurs pour une gestion cohérente des erreurs
  */
 export enum ErrorType {
   API_ERROR = "API_ERROR",
@@ -14,7 +14,7 @@ export enum ErrorType {
 }
 
 /**
- * Interface for structured error information
+ * Interface pour les informations d'erreur structurées
  */
 export interface ErrorInfo {
   type: ErrorType;
@@ -25,12 +25,12 @@ export interface ErrorInfo {
 }
 
 /**
- * Handles errors consistently across all commands
+ * Gère les erreurs de manière cohérente pour toutes les commandes
  * 
- * @param error - The error that occurred
- * @param interaction - The Discord interaction
- * @param commandName - The name of the command where the error occurred
- * @param metadata - Additional metadata for logging
+ * @param error - L'erreur qui s'est produite
+ * @param interaction - L'interaction Discord
+ * @param commandName - Le nom de la commande où l'erreur s'est produite
+ * @param metadata - Métadonnées supplémentaires pour la journalisation
  * @returns void
  */
 export async function handleCommandError(
@@ -118,11 +118,11 @@ export async function handleCommandError(
 }
 
 /**
- * Creates a custom error with a specific error type
+ * Crée une erreur personnalisée avec un type d'erreur spécifique
  * 
- * @param message - Error message
- * @param type - Error type
- * @returns Custom error with type
+ * @param message - Message d'erreur
+ * @param type - Type d'erreur
+ * @returns Erreur personnalisée avec type
  */
 export function createError(message: string, type: ErrorType): Error {
   const error = new Error(message);
@@ -131,11 +131,11 @@ export function createError(message: string, type: ErrorType): Error {
 }
 
 /**
- * Wraps a command execution function with error handling
+ * Enveloppe une fonction d'exécution de commande avec gestion des erreurs
  * 
- * @param commandFn - The command execution function to wrap
- * @param commandName - The name of the command
- * @returns Wrapped function with error handling
+ * @param commandFn - La fonction d'exécution de commande à envelopper
+ * @param commandName - Le nom de la commande
+ * @returns Fonction enveloppée avec gestion des erreurs
  */
 export function withErrorHandling(
   commandFn: (interaction: ChatInputCommandInteraction) => Promise<void>,

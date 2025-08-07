@@ -6,11 +6,23 @@ import {
 import logger from "../utils/logger.js";
 import { withErrorHandling, createError, ErrorType } from "../utils/errorHandler.js";
 
+/**
+ * URL de base de l'API Albion Online pour les informations de jeu
+ */
 const baseUrl = "https://gameinfo-ams.albiononline.com/api/gameinfo";
 
+/**
+ * Configuration de la commande slash Discord pour les informations de guilde
+ */
 export const data = new SlashCommandBuilder()
     .setName("guild")
     .setDescription("Affiche les informations d'une guilde Albion Online")
+    /**
+     * Option pour spécifier le nom de la guilde
+     * 
+     * @param option - Constructeur d'option de commande
+     * @returns Option configurée
+     */
     .addStringOption((option) =>
         option
             .setName("nom")
@@ -18,6 +30,12 @@ export const data = new SlashCommandBuilder()
             .setRequired(true),
     );
 
+/**
+ * Exécute la commande pour afficher les informations d'une guilde
+ * 
+ * @param interaction - L'interaction Discord qui a déclenché la commande
+ * @throws Erreur si la guilde n'est pas trouvée
+ */
 async function executeCommand(interaction: ChatInputCommandInteraction) {
     const nomGuilde = interaction.options.getString("nom", true);
 
@@ -89,5 +107,8 @@ async function executeCommand(interaction: ChatInputCommandInteraction) {
     await interaction.reply({ embeds: [embed] });
 }
 
-// Wrap the command execution with error handling
+/**
+ * Exporte la fonction d'exécution de la commande avec gestion des erreurs
+ * Cette fonction est appelée par le gestionnaire de commandes Discord
+ */
 export const execute = withErrorHandling(executeCommand, "guild");
