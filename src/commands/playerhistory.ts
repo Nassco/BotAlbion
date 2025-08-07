@@ -11,6 +11,7 @@ import { getPlayerHistory, estimateEquipmentValue } from "../services/albionApi.
 import { EMOJI_NUMBERS, BUTTON_COLLECTOR_TIMEOUT } from "../constants.js";
 import { HistoryEntry } from "../interfaces/AlbionApiTypes.js";
 import { findPlayer } from "../utils/playerUtils.js";
+import logger from "../utils/logger.js";
 
 export const data = new SlashCommandBuilder()
     .setName("playerhistory")
@@ -53,7 +54,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const pseudo = interaction.options.getString("pseudo", true);
     const type = interaction.options.getString("type", true);
 
-    console.log(`🔍 /playerhistory ${pseudo} (${type})`);
+    logger.info(`🔍 /playerhistory ${pseudo} (${type})`, { 
+        command: 'playerhistory', 
+        pseudo, 
+        type 
+    });
 
     try {
         const player = await findPlayer(interaction, pseudo);
@@ -173,7 +178,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             message.edit({ components: [] }).catch(() => {});
         });
     } catch (err) {
-        console.error(`❌ Erreur dans /playerhistory :`, err);
+        logger.error(`❌ Erreur dans /playerhistory`, { 
+            command: 'playerhistory',
+            pseudo: interaction.options.getString("pseudo", true),
+            type: interaction.options.getString("type", true),
+            error: err
+        });
         await interaction.reply({
             content: "❌ Impossible de récupérer les données du joueur.",
             flags: ['Ephemeral'],

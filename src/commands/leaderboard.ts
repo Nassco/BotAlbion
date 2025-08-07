@@ -6,6 +6,7 @@ import {
 import db from "../db.js";
 import { getPlayerInfo } from "../services/albionApi.js";
 import { PlayerInfo } from "../interfaces/PlayerInfo.js";
+import logger from "../utils/logger.js";
 
 type RegisteredPlayer = {
   name: string;
@@ -61,7 +62,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       
       return { name: player.name, fame };
     } catch (err) {
-      console.warn(`⚠️ Erreur pour ${player.name} :`, err);
+      logger.warn(`⚠️ Erreur pour ${player.name}`, { 
+        command: 'leaderboard', 
+        player: player.name, 
+        playerId: player.idAO, 
+        error: err 
+      });
       return null;
     }
   });

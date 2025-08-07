@@ -3,9 +3,9 @@ import {
     ChatInputCommandInteraction,
     EmbedBuilder,
 } from "discord.js";
-import { PlayerInfo } from "../interfaces/PlayerInfo.js"; // ← Import du type
 import { getPlayerInfo } from "../services/albionApi.js";
 import { findPlayer } from "../utils/playerUtils.js";
+import logger from "../utils/logger.js";
 
 export const data = new SlashCommandBuilder()
     .setName("playerstats")
@@ -21,7 +21,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: ChatInputCommandInteraction) {
     const pseudo = interaction.options.getString("pseudo", true);
-    console.log(`🔍 /playerstats ${pseudo}`);
+    logger.info(`🔍 /playerstats ${pseudo}`, { command: 'playerstats', pseudo });
 
     try {
         const player = await findPlayer(interaction, pseudo);
@@ -31,7 +31,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         const stats = await getPlayerInfo(id);
 
-        console.log(`✅ Stats trouvées pour ${stats.Name} (${stats.Id})`);
+        logger.info(`✅ Stats trouvées pour ${stats.Name} (${stats.Id})`, { 
+            command: 'playerstats', 
+            player: stats.Name, 
+            playerId: stats.Id 
+        });
 
         const fameTotal =
             (stats.KillFame ?? 0) +
@@ -89,7 +93,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        console.error(`❌ Erreur dans /playerstats :`, err);
+        logger.error(`❌ Erreur dans /playerstats`, { 
+            command: 'playerstats',
+            pseudo: interaction.options.getString("pseudo", true),
+            error: err
+        });
         await interaction.reply({
             content: "❌ Impossible de récupérer les infos du joueur.",
             flags: ["Ephemeral"],

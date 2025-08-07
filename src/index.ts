@@ -11,11 +11,12 @@ import * as fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import config from "./config.ts";
+import logger from "./utils/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-console.log("🔁 Initialisation du bot...");
+logger.info("🔁 Initialisation du bot...");
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds],
@@ -34,20 +35,20 @@ try {
         file.endsWith(".ts"),
     );
 
-    console.log(`📁 ${commandFiles.length} fichiers de commande détectés.`);
+    logger.info(`📁 ${commandFiles.length} fichiers de commande détectés.`);
 
     for (const file of commandFiles) {
         const command = await import(`./commands/${file}`);
         if (command.data && command.execute) {
             commands.set(command.data.name, command);
             commandsData.push(command.data.toJSON());
-            console.log(`✅ Commande chargée : ${command.data.name}`);
+            logger.info(`✅ Commande chargée : ${command.data.name}`);
         } else {
-            console.warn(`⚠️  Fichier ignoré (structure incorrecte) : ${file}`);
+            logger.warn(`⚠️  Fichier ignoré (structure incorrecte) : ${file}`);
         }
     }
 } catch (err) {
-    console.error("❌ Erreur lors du chargement des commandes :", err);
+    logger.error("❌ Erreur lors du chargement des commandes :", { error: err });
     process.exit(1);
 }
 
@@ -58,18 +59,18 @@ try {
         throw new Error("❌ GUILD_IDS manquant dans .env ou vide.");
     }
 
-    console.log("📡 Enregistrement des commandes sur les guildes de dev...");
+    logger.info("📡 Enregistrement des commandes sur les guildes de dev...");
 
     const controller = new AbortController();
     const timeout = setTimeout(() => {
         controller.abort();
-        console.error(
-            "⏰ Timeout atteint : l'enregistrement des commandes est trop long.",
+        logger.error(
+            "⏰ Timeout atteint : l'enregistrement des commandes est trop long."
         );
     }, 15000);
 
     for (const guildId of config.guildIds) {
-        console.log(`🔧 Enregistrement dans la guilde ${guildId}...`);
+        logger.info(`🔧 Enregistrement dans la guilde ${guildId}...`);
         await rest.put(
             Routes.applicationGuildCommands(config.clientId!, guildId),
             { body: commandsData, signal: controller.signal },
@@ -77,16 +78,16 @@ try {
     }
 
     clearTimeout(timeout);
-    console.log(
+    logger.info(
         `✅ ${commands.size} commande(s) enregistrée(s) dans ${config.guildIds.length} guilde(s).`,
     );
 } catch (err) {
-    console.error("❌ Erreur lors de l'enregistrement des commandes :", err);
+    logger.error("❌ Erreur lors de l'enregistrement des commandes :", { error: err });
     process.exit(1);
 }
 
 client.once("ready", () => {
-    console.log(`🟢 Connecté en tant que ${client.user?.tag}`);
+    logger.info(`🟢 Connecté en tant que ${client.user?.tag}`);
 });
 
 client.on("interactionCreate", async (interaction: Interaction) => {
@@ -97,7 +98,10 @@ client.on("interactionCreate", async (interaction: Interaction) => {
         try {
             await command.execute(interaction);
         } catch (error) {
-            console.error("❌ Erreur dans la commande :", error);
+            logger.error("❌ Erreur dans la commande :", { 
+                command: interaction.commandName,
+                error 
+            });
             await interaction.reply({
                 content: "❌ Une erreur est survenue.",
                 flags: ["Ephemeral"],
@@ -106,16 +110,17 @@ client.on("interactionCreate", async (interaction: Interaction) => {
     }
 
     if (interaction.isButton()) {
-        console.log(
+        logger.debug(
             `🔘 Bouton cliqué : ${interaction.customId} par ${interaction.user.tag}`,
+            { customId: interaction.customId, user: interaction.user.tag }
         );
     }
 });
 
 try {
-    console.log("🔐 Connexion à Discord...");
+    logger.info("🔐 Connexion à Discord...");
     await client.login(config.token);
 } catch (err) {
-    console.error("❌ Échec de la connexion à Discord :", err);
+    logger.error("❌ Échec de la connexion à Discord :", { error: err });
     process.exit(1);
 }

@@ -1,6 +1,7 @@
 import { ChatInputCommandInteraction } from "discord.js";
 import { searchPlayer } from "../services/albionApi.js";
 import { PlayerSearchEntry } from "../interfaces/AlbionApiTypes.js";
+import logger from "./logger.js";
 
 /**
  * Find a player by name and handle common error cases
@@ -26,7 +27,7 @@ export async function findPlayer(
 
     return searchJson.players[0];
   } catch (err) {
-    console.error(`❌ Erreur lors de la recherche du joueur ${playerName}:`, err);
+    logger.error(`❌ Erreur lors de la recherche du joueur ${playerName}`, { playerName, error: err });
     await interaction.reply({
       content: "❌ Impossible de rechercher le joueur. Veuillez réessayer plus tard.",
       flags: ['Ephemeral'],

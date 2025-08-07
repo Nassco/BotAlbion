@@ -9,6 +9,9 @@ const config = {
     token: process.env.DISCORD_TOKEN!,
     clientId: process.env.CLIENT_ID!,
     guildIds: process.env.GUILD_IDS?.split(",").map((id) => id.trim()) ?? [],
+    logging: {
+        level: process.env.LOG_LEVEL || 'info',
+    },
 };
 
 export default config;
