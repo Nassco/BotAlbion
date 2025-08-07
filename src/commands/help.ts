@@ -6,6 +6,8 @@ import {
   SlashCommandBuilder,
   EmbedBuilder,
 } from "discord.js";
+import logger from "../utils/logger.js";
+import { withErrorHandling } from "../utils/errorHandler.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -16,7 +18,13 @@ export const data = new SlashCommandBuilder()
     "Affiche dynamiquement toutes les commandes disponibles avec leurs options",
   );
 
-export async function execute(interaction: ChatInputCommandInteraction) {
+/**
+ * Exécute la commande d'aide
+ * 
+ * @param interaction - L'interaction Discord qui a déclenché la commande
+ */
+async function executeCommand(interaction: ChatInputCommandInteraction) {
+  logger.info(`🔍 /help exécuté`, { command: 'help', user: interaction.user.tag });
   const commandsPath = __dirname;
   const commandFiles = readdirSync(commandsPath).filter(
     (file) => file.endsWith(".ts") || file.endsWith(".js"),
@@ -47,7 +55,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         commandDescriptions.push(line);
       }
     } catch (err) {
-      console.warn(`❌ Erreur en important ${file}:`, err);
+      logger.warn(`⚠️ Erreur en important ${file}`, { 
+        command: 'help', 
+        file, 
+        error: err 
+      });
     }
   }
 
@@ -59,5 +71,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .setDescription(commandDescriptions.join("\n\n"))
     .setColor(0x2f3136); // Couleur sobre (comme Discord dark)
 
-  await interaction.reply({ embeds: [embed] }); // ✅ PUBLIC & avec embed
+  logger.info(`✅ Aide générée avec ${commandDescriptions.length} commandes`, { 
+    command: 'help', 
+    commandCount: commandDescriptions.length 
+  });
+  
+  await interaction.reply({ embeds: [embed] });
 }
+
+/**
+ * Exporte la fonction d'exécution de la commande avec gestion des erreurs
+ * Cette fonction est appelée par le gestionnaire de commandes Discord
+ */
+export const execute = withErrorHandling(executeCommand, "help");

@@ -7,6 +7,7 @@ import db from "../db.js";
 import { getPlayerInfo } from "../services/albionApi.js";
 import { PlayerInfo } from "../interfaces/PlayerInfo.js";
 import logger from "../utils/logger.js";
+import { withErrorHandling, createError, ErrorType } from "../utils/errorHandler.js";
 
 type RegisteredPlayer = {
   name: string;
@@ -29,7 +30,15 @@ export const data = new SlashCommandBuilder()
       ),
   );
 
-export async function execute(interaction: ChatInputCommandInteraction) {
+/**
+ * Exécute la commande de leaderboard
+ * 
+ * @param interaction - L'interaction Discord qui a déclenché la commande
+ * @throws Erreur si aucun joueur n'est enregistré ou si les données ne peuvent pas être récupérées
+ */
+async function executeCommand(interaction: ChatInputCommandInteraction) {
+  const type = interaction.options.getString("type", true);
+  logger.info(`🔍 /leaderboard ${type}`, { command: 'leaderboard', type, user: interaction.user.tag });
   const guildId = interaction.guildId;
   if (!guildId) {
     await interaction.reply({
@@ -48,10 +57,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .all(guildId) as RegisteredPlayer[];
 
   if (players.length === 0) {
-    await interaction.editReply(
-      "📭 Aucun joueur enregistré pour cette guilde.",
-    );
-    return;
+    logger.warn(`⚠️ Aucun joueur enregistré pour la guilde ${guildId}`, { 
+      command: 'leaderboard', 
+      guildId 
+    });
+    throw createError("No players registered for this guild", ErrorType.NOT_FOUND_ERROR);
   }
 
   // Utiliser Promise.all pour exécuter les requêtes en parallèle
@@ -76,8 +86,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const results = fetchResults.filter((result): result is { name: string; fame: number } => result !== null);
 
   if (results.length === 0) {
-    await interaction.editReply("❌ Aucune donnée récupérée.");
-    return;
+    logger.warn(`⚠️ Aucune donnée récupérée pour les joueurs de la guilde ${guildId}`, { 
+      command: 'leaderboard', 
+      guildId,
+      playerCount: players.length
+    });
+    throw createError("No data retrieved for any player", ErrorType.API_ERROR);
   }
 
   results.sort((a, b) => b.fame - a.fame);
@@ -95,5 +109,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .setDescription(lines.join("\n"))
     .setColor(0xf1c40f);
 
+  logger.info(`✅ Leaderboard généré avec ${results.length} joueurs`, { 
+    command: 'leaderboard', 
+    type,
+    playerCount: results.length 
+  });
+  
   await interaction.editReply({ embeds: [embed] });
 }
+
+/**
+ * Exporte la fonction d'exécution de la commande avec gestion des erreurs
+ * Cette fonction est appelée par le gestionnaire de commandes Discord
+ */
+export const execute = withErrorHandling(executeCommand, "leaderboard");

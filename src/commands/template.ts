@@ -7,6 +7,9 @@ import { createCanvas, loadImage, registerFont } from "canvas";
 import path from "path";
 import { fileURLToPath } from "url";
 import fetch from "node-fetch";
+import { ALBION_API_BASE_URL, ALBION_PRICE_API_URL } from "../constants.js";
+import logger from "../utils/logger.js";
+import { withErrorHandling, createError, ErrorType } from "../utils/errorHandler.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,9 +49,17 @@ export const data = new SlashCommandBuilder()
   .setName("template")
   .setDescription("Génère une image avec les équipements du dernier kill");
 
-export async function execute(interaction: ChatInputCommandInteraction) {
+/**
+ * Exécute la commande pour générer une image avec les équipements du dernier kill
+ * 
+ * @param interaction - L'interaction Discord qui a déclenché la commande
+ */
+async function executeCommand(interaction: ChatInputCommandInteraction) {
+  logger.info(`🔍 /template exécuté`, { command: 'template', user: interaction.user.tag });
+  
   try {
     await interaction.deferReply();
+    logger.debug(`🔄 Réponse différée`, { command: 'template' });
 
     const bgPath = path.join(__dirname, "..", "assets", "template.png");
     const bg = await loadImage(bgPath);
@@ -56,11 +67,22 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const ctx = canvas.getContext("2d");
     ctx.drawImage(bg, 0, 0, 1200, 610);
 
+    const killUrl = `${ALBION_API_BASE_URL}/players/tO9kB-LWRpmdszaTISBaVw/kills`;
+    logger.http(`📤 Requête : GET ${killUrl}`, { command: 'template', url: killUrl });
+    
     const killData = (await (
-      await fetch(
-        "https://gameinfo-ams.albiononline.com/api/gameinfo/players/tO9kB-LWRpmdszaTISBaVw/kills",
-      )
+      await fetch(killUrl)
     ).json()) as any[];
+
+    if (!killData || killData.length === 0) {
+      logger.warn(`⚠️ Aucun kill trouvé`, { command: 'template' });
+      throw createError("No kills found", ErrorType.NOT_FOUND_ERROR);
+    }
+
+    logger.info(`📥 Données récupérées : ${killData.length} kills`, { 
+      command: 'template', 
+      killCount: killData.length 
+    });
 
     const kill = killData[0];
     const killerEquip = kill.Killer.Equipment;
@@ -79,7 +101,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
           const img = await loadImage(imgUrl);
           ctx.drawImage(img, x, y, 125, 129);
         } catch (err) {
-          console.warn(`❌ Échec chargement image : ${imgUrl}`);
+          logger.warn(`⚠️ Échec chargement image : ${imgUrl}`, { 
+            command: 'template', 
+            itemType: type, 
+            quality, 
+            error: err 
+          });
         }
       }
     }
@@ -142,7 +169,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         if (!itemId) return 0;
 
         try {
-          const url = `https://west.albion-online-data.com/api/v2/stats/prices/${itemId}.json?qualities=${quality}`;
+          const url = `${ALBION_PRICE_API_URL}/prices/${itemId}.json?qualities=${quality}`;
+          logger.http(`📤 Requête prix : GET ${url}`, { 
+            command: 'template', 
+            itemId, 
+            quality 
+          });
+          
           const res = await fetch(url);
           const data = await res.json();
 
@@ -156,7 +189,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
           }
           return 0;
         } catch (err) {
-          console.warn(`⚠️ Erreur prix pour ${itemId}`, err);
+          logger.warn(`⚠️ Erreur récupération prix pour ${itemId}`, { 
+            command: 'template', 
+            itemId, 
+            quality, 
+            error: err 
+          });
           return 0;
         }
       });
@@ -214,14 +252,20 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       name: "kill_template.png",
     });
 
+    logger.info(`✅ Image générée avec succès`, { command: 'template' });
+    
     await interaction.editReply({
       content: "Voici l’image générée avec les équipements :",
       files: [attachment],
     });
   } catch (error) {
-    console.error("Erreur dans /template :", error);
-    await interaction.editReply({
-      content: "❌ Une erreur est survenue.",
-    });
+    logger.error("❌ Erreur dans /template", { command: 'template', error });
+    throw error;
   }
 }
+
+/**
+ * Exporte la fonction d'exécution de la commande avec gestion des erreurs
+ * Cette fonction est appelée par le gestionnaire de commandes Discord
+ */
+export const execute = withErrorHandling(executeCommand, "template");
