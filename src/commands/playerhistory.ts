@@ -12,6 +12,7 @@ import { EMOJI_NUMBERS, BUTTON_COLLECTOR_TIMEOUT } from "../constants.js";
 import { HistoryEntry } from "../interfaces/AlbionApiTypes.js";
 import { findPlayer } from "../utils/playerUtils.js";
 import logger from "../utils/logger.js";
+import { withErrorHandling, createError, ErrorType } from "../utils/errorHandler.js";
 
 export const data = new SlashCommandBuilder()
     .setName("playerhistory")
@@ -50,7 +51,7 @@ type EquipmentItem = {
     Quality: number;
 };
 
-export async function execute(interaction: ChatInputCommandInteraction) {
+async function executeCommand(interaction: ChatInputCommandInteraction) {
     const pseudo = interaction.options.getString("pseudo", true);
     const type = interaction.options.getString("type", true);
 
@@ -60,74 +61,79 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         type 
     });
 
-    try {
-        const player = await findPlayer(interaction, pseudo);
-        if (!player) return; // findPlayer already replied with an error message
-        
-        const playerId = player.Id;
+    const player = await findPlayer(interaction, pseudo);
+    if (!player) return; // findPlayer already replied with an error message
+    
+    const playerId = player.Id;
 
-        const history = await getPlayerHistory(playerId, type as "kills" | "deaths");
+    const history = await getPlayerHistory(playerId, type as "kills" | "deaths");
 
-        if (!Array.isArray(history) || history.length === 0) {
-            return interaction.reply({
-                content: `Aucun ${type === "kills" ? "kill" : "mort"} récent trouvé pour ${pseudo}.`,
+    if (!Array.isArray(history) || history.length === 0) {
+        logger.warn(`⚠️ Aucun ${type} trouvé pour "${pseudo}"`, { command: 'playerhistory', pseudo, type });
+        throw createError(`No ${type} found for player: ${pseudo}`, ErrorType.NOT_FOUND_ERROR);
+    }
+
+    const title =
+        type === "kills"
+            ? `⚔️ Derniers kills de ${pseudo}`
+            : `💀 Dernières morts de ${pseudo}`;
+    const color = type === "kills" ? 0x00cc99 : 0xff0000;
+
+    const embed = new EmbedBuilder()
+        .setTitle(title)
+        .setColor(color)
+        .setTimestamp();
+
+    const rows: ActionRowBuilder<ButtonBuilder>[] = [];
+
+    const buttons = history.slice(0, 5).map((entry: HistoryEntry, index: number) => {
+        const timestamp = formatDateFR(entry.TimeStamp);
+        embed.addFields({
+            name: `#${index + 1} - ${timestamp}`,
+            value:
+                type === "kills"
+                    ? `Victime : ${entry.Victim?.Name || "Inconnue"}\nFame gagné : ${(entry.TotalVictimKillFame ?? 0).toLocaleString()}`
+                    : `Tueur : ${entry.Killer?.Name || "Inconnu"}\nFame perdu : ${(entry.TotalVictimKillFame ?? 0).toLocaleString()}`,
+        });
+
+        return new ButtonBuilder()
+            .setCustomId(`history_${index}`)
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji(EMOJI_NUMBERS[index]);
+    });
+
+    rows.push(new ActionRowBuilder<ButtonBuilder>().addComponents(buttons));
+
+    await interaction.reply({ embeds: [embed], components: rows });
+
+    const message = await interaction.fetchReply();
+
+    const collector = message.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        time: BUTTON_COLLECTOR_TIMEOUT,
+    });
+
+    collector.on("collect", async (i) => {
+        if (i.user.id !== interaction.user.id) {
+            return i.reply({
+                content: "❌ Ce bouton ne vous est pas destiné.",
                 flags: ['Ephemeral'],
             });
         }
 
-        const title =
-            type === "kills"
-                ? `⚔️ Derniers kills de ${pseudo}`
-                : `💀 Dernières morts de ${pseudo}`;
-        const color = type === "kills" ? 0x00cc99 : 0xff0000;
-
-        const embed = new EmbedBuilder()
-            .setTitle(title)
-            .setColor(color)
-            .setTimestamp();
-
-        const rows: ActionRowBuilder<ButtonBuilder>[] = [];
-
-        const buttons = history.slice(0, 5).map((entry: HistoryEntry, index: number) => {
-            const timestamp = formatDateFR(entry.TimeStamp);
-            embed.addFields({
-                name: `#${index + 1} - ${timestamp}`,
-                value:
-                    type === "kills"
-                        ? `Victime : ${entry.Victim?.Name || "Inconnue"}\nFame gagné : ${(entry.TotalVictimKillFame ?? 0).toLocaleString()}`
-                        : `Tueur : ${entry.Killer?.Name || "Inconnu"}\nFame perdu : ${(entry.TotalVictimKillFame ?? 0).toLocaleString()}`,
-            });
-
-            return new ButtonBuilder()
-                .setCustomId(`history_${index}`)
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji(EMOJI_NUMBERS[index]);
-        });
-
-        rows.push(new ActionRowBuilder<ButtonBuilder>().addComponents(buttons));
-
-        await interaction.reply({ embeds: [embed], components: rows });
-
-        const message = await interaction.fetchReply();
-
-        const collector = message.createMessageComponentCollector({
-            componentType: ComponentType.Button,
-            time: BUTTON_COLLECTOR_TIMEOUT,
-        });
-
-        collector.on("collect", async (i) => {
-            if (i.user.id !== interaction.user.id) {
-                return i.reply({
-                    content: "❌ Ce bouton ne vous est pas destiné.",
-                    flags: ['Ephemeral'],
-                });
-            }
-
+        try {
             const index = parseInt(i.customId.replace("history_", ""), 10);
             const selected = history[index];
 
             const killer = selected.Killer || {};
             const victim = selected.Victim || {};
+
+            logger.info(`🔍 Détails demandés pour le combat #${index + 1}`, { 
+                command: 'playerhistory', 
+                pseudo, 
+                type,
+                combatIndex: index 
+            });
 
             const [killerValue, victimValue] = await Promise.all([
                 estimateEquipmentValue(killer.Equipment || {}),
@@ -172,21 +178,28 @@ export async function execute(interaction: ChatInputCommandInteraction) {
                 .setTimestamp();
 
             await i.reply({ embeds: [detailEmbed], flags: ['Ephemeral'] });
-        });
+        } catch (err) {
+            logger.error(`❌ Erreur lors de l'affichage des détails`, { 
+                command: 'playerhistory',
+                buttonId: i.customId,
+                error: err
+            });
+            await i.reply({ 
+                content: "❌ Une erreur est survenue lors de la récupération des détails.", 
+                flags: ['Ephemeral'] 
+            });
+        }
+    });
 
-        collector.on("end", () => {
-            message.edit({ components: [] }).catch(() => {});
+    collector.on("end", () => {
+        message.edit({ components: [] }).catch((err) => {
+            logger.warn(`⚠️ Impossible de supprimer les boutons`, { 
+                command: 'playerhistory',
+                error: err
+            });
         });
-    } catch (err) {
-        logger.error(`❌ Erreur dans /playerhistory`, { 
-            command: 'playerhistory',
-            pseudo: interaction.options.getString("pseudo", true),
-            type: interaction.options.getString("type", true),
-            error: err
-        });
-        await interaction.reply({
-            content: "❌ Impossible de récupérer les données du joueur.",
-            flags: ['Ephemeral'],
-        });
-    }
+    });
 }
+
+// Wrap the command execution with error handling
+export const execute = withErrorHandling(executeCommand, "playerhistory");
