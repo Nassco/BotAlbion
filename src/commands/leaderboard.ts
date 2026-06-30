@@ -50,8 +50,6 @@ async function executeCommand(interaction: ChatInputCommandInteraction) {
 
   await interaction.deferReply();
 
-  const type = interaction.options.getString("type", true);
-
   const players = db
     .prepare("SELECT name, idAO FROM players WHERE guildId = ?")
     .all(guildId) as RegisteredPlayer[];
