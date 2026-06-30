@@ -10,6 +10,7 @@ import {
 import * as fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
+import { inspect } from "util";
 import config from "./config.ts";
 import logger from "./utils/logger.js";
 
@@ -67,9 +68,11 @@ try {
         }
     }
 } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const stack = err instanceof Error ? (err.stack ?? '') : '';
-    logger.error(`❌ Erreur lors du chargement des commandes : ${msg}\n${stack}`);
+    const msg = err instanceof Error
+        ? `${err.message}\n${err.stack ?? ''}`
+        : inspect(err, { depth: 4 });
+    console.error(`❌ Erreur chargement commandes :\n${msg}`);
+    logger.error(`❌ Erreur lors du chargement des commandes : ${msg}`);
     process.exit(1);
 }
 
