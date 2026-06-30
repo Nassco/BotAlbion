@@ -49,6 +49,7 @@ export interface CombatParticipant {
     Potion?: EquipmentItem | null;
     Food?: EquipmentItem | null;
   };
+  Inventory?: (EquipmentItem | null)[];
 }
 
 /**
