@@ -67,7 +67,9 @@ try {
         }
     }
 } catch (err) {
-    logger.error("❌ Erreur lors du chargement des commandes :", { error: err });
+    const msg = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? (err.stack ?? '') : '';
+    logger.error(`❌ Erreur lors du chargement des commandes : ${msg}\n${stack}`);
     process.exit(1);
 }
 
